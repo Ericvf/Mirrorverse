@@ -16,7 +16,6 @@ window.Resize += s => app.Resize(s);
 window.Render += t => app.Draw(window, t);
 window.Run();
 
-
 static ServiceProvider BuildServiceProvider()
 {
     var services = new ServiceCollection();
