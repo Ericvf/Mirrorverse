@@ -5,6 +5,7 @@ using Silk.NET.Windowing;
 
 var windowOptions = WindowOptions.Default;
 windowOptions.API = GraphicsAPI.None;
+windowOptions.WindowBorder = WindowBorder.Hidden;
 
 var serviceProvider = BuildServiceProvider();
 var app = serviceProvider.GetRequiredService<MirrorverseApp>();

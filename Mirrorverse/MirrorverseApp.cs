@@ -1,7 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
-using Silk.NET.Core;
 using Silk.NET.Maths;
 using Silk.NET.Windowing;
+using System.Runtime.InteropServices;
+using static DisplayHelper;
 
 public class MirrorverseApp : BaseApp
 {
@@ -18,12 +19,20 @@ public class MirrorverseApp : BaseApp
     {
         await base.Initialize(window, args);
 
-        window.WindowBorder = WindowBorder.Hidden;
-        window.Position = new Vector2D<int>(2560, 0);
-        window.Size = new Vector2D<int>(2560, 1440);
+        var (screenX, screenY) = GetMonitorResolution();
+        window.Position = new Vector2D<int>(screenX / 2, 0);
+        window.Size = new Vector2D<int>(screenX / 2, screenY);
 
         desktopDuplication = Create<OutputDuplicationComponent>();
         desktopDuplication.Initialize(this);
+    }
+
+    private (int x, int y) GetMonitorResolution()
+    {
+        var monitor = MonitorFromPoint(new POINTSTRUCT(), 0);
+        var info = new MONITORINFOEX();
+        GetMonitorInfo(new HandleRef(this, monitor), info);
+        return (info.rcMonitor.right, info.rcMonitor.bottom);
     }
 
     public void Draw(IWindow window, double time)
