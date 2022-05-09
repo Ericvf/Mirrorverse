@@ -31,7 +31,8 @@ static ServiceProvider BuildServiceProvider()
 
     services
         .AddSingleton<MirrorverseApp>()
-        .AddTransient<OutputDuplicationComponent>();
+        .AddTransient<RenderTargetComponent>()
+        .AddTransient<DesktopDuplicationComponent>();
 
     return services.BuildServiceProvider();
 }

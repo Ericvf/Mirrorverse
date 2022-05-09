@@ -8,7 +8,7 @@ using Silk.NET.Windowing;
 
 public unsafe class BaseApp : IApp
 {
-    public const Format GraphicsFormat = Format.FormatR8G8B8A8Unorm; // FormatR16G16B16A16Float;
+    public const Format GraphicsFormat = Format.FormatR8G8B8A8Unorm;
     private ComPtr<ID3D11RenderTargetView> backBufferRenderTargetView = default;
     private ComPtr<ID3D11Resource> backBufferTexture = default;
     private ComPtr<ID3D11Texture2D> depthStencilTexture = default;
@@ -62,7 +62,7 @@ public unsafe class BaseApp : IApp
         // Init device and swapchain
         SwapChainDesc swapChainDesc;
         swapChainDesc.BufferCount = 1;
-        swapChainDesc.BufferDesc.Format = GraphicsFormat; //Format.FormatR8G8B8A8Unorm;
+        swapChainDesc.BufferDesc.Format = Format.FormatR8G8B8A8Unorm;
         swapChainDesc.BufferUsage = DXGI.UsageRenderTargetOutput;
         swapChainDesc.OutputWindow = window.Native.Win32.Value.Hwnd;
         swapChainDesc.SampleDesc.Count = 1;
@@ -132,7 +132,7 @@ public unsafe class BaseApp : IApp
             backBufferRenderTargetView.Release();
             backBufferTexture.Release();
 
-            graphicsContext.swapChain.GetPinnableReference()->ResizeBuffers(2, (uint)windowViewport.Width, (uint)windowViewport.Height, Silk.NET.DXGI.Format.FormatR8G8B8A8Unorm, 0);
+            graphicsContext.swapChain.GetPinnableReference()->ResizeBuffers(2, (uint)windowViewport.Width, (uint)windowViewport.Height, Format.FormatR8G8B8A8Unorm, 0);
         }
 
         graphicsContext.swapChain.GetPinnableReference()
@@ -143,7 +143,6 @@ public unsafe class BaseApp : IApp
         device
             ->CreateRenderTargetView(backBufferTexture, null, backBufferRenderTargetView.GetAddressOf())
             .ThrowHResult();
-
 
         Texture2DDesc depthStencilTextureDesc;
         depthStencilTextureDesc.Width = (uint)windowViewport.Width;
@@ -157,7 +156,6 @@ public unsafe class BaseApp : IApp
         depthStencilTextureDesc.BindFlags = (uint)(BindFlag.BindDepthStencil);
         depthStencilTextureDesc.CPUAccessFlags = 0;
         depthStencilTextureDesc.MiscFlags = 0;
-
 
         var depthStencilViewDesc = new DepthStencilViewDesc(
             viewDimension: DsvDimension.DsvDimensionTexture2D,

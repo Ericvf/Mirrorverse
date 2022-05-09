@@ -8,6 +8,10 @@
 		<ApplicationIcon>Mirrorverse.ico</ApplicationIcon>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <Optimize>False</Optimize>
+	</PropertyGroup>
+
 	<ItemGroup>
 	  <Content Include="Mirrorverse.ico">
 	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
@@ -27,6 +31,9 @@
 
 	<ItemGroup>
 	  <None Update="Mirrorverse.png">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Shaders\PixelShader2.hlsl">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>
 	  <None Update="Shaders\PixelShader.hlsl">

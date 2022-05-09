@@ -3,40 +3,51 @@ using Silk.NET.Core.Native;
 using Silk.NET.Direct3D.Compilers;
 using Silk.NET.Direct3D11;
 using Silk.NET.DXGI;
+using Silk.NET.Maths;
 using System.Numerics;
 
-public unsafe class OutputDuplicationComponent : Component
+public unsafe class DesktopDuplicationComponent : Component
 {
-    private readonly ILogger<OutputDuplicationComponent> logger;
+    private readonly ILogger<DesktopDuplicationComponent> logger;
     private readonly D3DCompiler compilerApi;
 
     private ComPtr<IDXGIOutputDuplication> outputDuplication = default;
     private ComPtr<ID3D11Buffer> vertexBuffer = default;
     private ComPtr<ID3D11InputLayout> inputLayout = default;
     private ComPtr<ID3D11PixelShader> pixelShader = default;
+    private ComPtr<ID3D11PixelShader> pixelShader2 = default;
     private ComPtr<ID3D11VertexShader> vertexShader = default;
 
+    private RenderTargetComponent renderTargetComponent;
     private const int VertexCount = 6;
 
-    public OutputDuplicationComponent(ILogger<OutputDuplicationComponent> logger)
+    public DesktopDuplicationComponent(ILogger<DesktopDuplicationComponent> logger)
     {
         this.logger = logger;
         this.compilerApi = D3DCompiler.GetApi();
     }
 
+    public ref ComPtr<ID3D11ShaderResourceView> RenderTarget => ref renderTargetComponent.renderTargetResourceView;
+
+    internal void Resize(IApp app, Vector2D<int> windowSize)
+    {
+        renderTargetComponent.Resize(app, windowSize);
+    }
+
+    public bool IsDrawn { get; set; }
+
     public override void Draw(IApp app, double time)
     {
         using ComPtr<IDXGIResource> desktopResource = default;
         OutduplFrameInfo outputFrameInfo = default;
-        
-        uint stride = (uint)sizeof(VertexPositionTexCoord);
-        uint offset = 0;
 
-        var hr = (uint)outputDuplication.GetPinnableReference()->AcquireNextFrame(100, ref outputFrameInfo, desktopResource.GetAddressOf());
+        var hr = (uint)outputDuplication.GetPinnableReference()->AcquireNextFrame(0, ref outputFrameInfo, desktopResource.GetAddressOf());
+        IsDrawn = false;
 
         if (hr == 0x887a0027)
             return;
 
+        IsDrawn = true;
         SilkMarshal.ThrowHResult((int)hr);
 
         using ComPtr<ID3D11Texture2D> acquiredDesktopImage = default;
@@ -58,6 +69,8 @@ public unsafe class OutputDuplicationComponent : Component
             ->CreateShaderResourceView((ID3D11Resource*)acquiredDesktopImage.GetPinnableReference(), ref shaderResourceViewDesc, acquiredImageShaderResourceView.GetAddressOf())
             .ThrowHResult();
 
+        renderTargetComponent.PrepareDraw(app);
+
         var deviceContext = app.GraphicsContext.deviceContext.GetPinnableReference();
 
         // Set resources
@@ -67,14 +80,20 @@ public unsafe class OutputDuplicationComponent : Component
         deviceContext->IASetPrimitiveTopology(D3DPrimitiveTopology.D3D11PrimitiveTopologyTrianglelist);
         deviceContext->PSSetShaderResources(0, 1, acquiredImageShaderResourceView.GetAddressOf());
 
+        uint stride = (uint)sizeof(VertexPositionTexCoord);
+        uint offset = 0;
         deviceContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), ref stride, ref offset);
         deviceContext->Draw(VertexCount, 0);
 
         outputDuplication.GetPinnableReference()->ReleaseFrame();
+
+        deviceContext->PSSetShader(pixelShader2, null, 0);
     }
 
     public override void Initialize(IApp app)
     {
+        renderTargetComponent = app.Create<RenderTargetComponent>();
+        renderTargetComponent.Initialize(app);
         var device = app.GraphicsContext.device.GetPinnableReference();
         var swapChain = app.GraphicsContext.swapChain.GetPinnableReference();
         var deviceContext = app.GraphicsContext.deviceContext.GetPinnableReference();
@@ -108,13 +127,17 @@ public unsafe class OutputDuplicationComponent : Component
 
         dxgiOutput->Release();
 
+
         logger.LogInformation("DuplicateOutput");
-        var formats = stackalloc[] { Format.FormatR8G8B8A8Unorm };
+
+
+        var formats = stackalloc[] { Format.FormatR8G8B8A8Unorm }; //FormatR8G8B8A8Unorm
         dxgiOutput6
             ->DuplicateOutput1((IUnknown*)device, 0, 1, formats, outputDuplication.GetAddressOf())
             .ThrowHResult();
 
         dxgiOutput6->Release();
+
 
         // Create vertex shader
         var compileFlags = 0u;
@@ -176,6 +199,32 @@ public unsafe class OutputDuplicationComponent : Component
 
         pixelShaderBlob->Release();
 
+        // Pixel shader
+        logger.LogInformation("CreatePixelShader");
+        fixed (char* fileName = Helpers.GetAssetFullPath(@"Shaders\PixelShader2.hlsl"))
+        {
+            compilerApi.CompileFromFile(fileName
+                , null
+                , null
+                , "PS"
+                , "ps_4_0"
+                , compileFlags
+                , 0
+                , &pixelShaderBlob
+                , &errorMsgs)
+            .ThrowHResult();
+        }
+
+        device
+            ->CreatePixelShader(
+                pixelShaderBlob->GetBufferPointer()
+                , pixelShaderBlob->GetBufferSize()
+                , null
+                , pixelShader2.GetAddressOf())
+            .ThrowHResult();
+
+        pixelShaderBlob->Release();
+
         // Create input layout
 
         var lpPOSITION = (byte*)SilkMarshal.StringToPtr("POSITION", NativeStringEncoding.LPStr);
@@ -229,14 +278,12 @@ public unsafe class OutputDuplicationComponent : Component
 
         var vertices = stackalloc VertexPositionTexCoord[]
         {
-            new VertexPositionTexCoord { Position = new Vector3(-1.0f, -1.0f, 0.0f),TexCoord = new Vector2(0.0f, 1.0f) },
+            new VertexPositionTexCoord { Position = new Vector3(-1.0f, -1.0f, 0.0f), TexCoord = new Vector2(0.0f, 1.0f) },
             new VertexPositionTexCoord { Position = new Vector3(-1.0f, 1.0f, 0.0f), TexCoord = new Vector2(0.0f, 0.0f) },
             new VertexPositionTexCoord { Position = new Vector3(1.0f, -1.0f, 0.0f), TexCoord = new Vector2(1.0f, 1.0f) },
-            
             new VertexPositionTexCoord { Position = new Vector3(1.0f, -1.0f, 0.0f), TexCoord = new Vector2(1.0f, 1.0f) },
             new VertexPositionTexCoord { Position = new Vector3(-1.0f, 1.0f, 0.0f), TexCoord = new Vector2(0.0f, 0.0f) },
-
-            new VertexPositionTexCoord { Position = new Vector3(1.0f, 1.0f, 0.0f),  TexCoord = new Vector2(1.0f, 0.0f) },
+            new VertexPositionTexCoord { Position = new Vector3(1.0f, 1.0f, 0.0f), TexCoord = new Vector2(1.0f, 0.0f) },
         };
 
         var subresourceData = new SubresourceData();
@@ -246,5 +293,7 @@ public unsafe class OutputDuplicationComponent : Component
         device
             ->CreateBuffer(ref bufferDesc, ref subresourceData, vertexBuffer.GetAddressOf())
             .ThrowHResult();
+
+
     }
 }
