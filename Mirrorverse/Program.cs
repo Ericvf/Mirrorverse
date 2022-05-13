@@ -14,6 +14,7 @@ using var window = Window.Create(windowOptions);
 
 window.Load += async () => await app.Initialize(window, args);
 window.Resize += s => app.Resize(s);
+window.Update += t => app.Update(window, t);
 window.Render += t => app.Draw(window, t);
 window.Run();
 
@@ -31,7 +32,8 @@ static ServiceProvider BuildServiceProvider()
 
     services
         .AddSingleton<MirrorverseApp>()
-        .AddTransient<OutputDuplicationComponent>();
+        .AddTransient<OutputDuplicationComponent>()
+        .AddTransient<MouseComponent>();
 
     return services.BuildServiceProvider();
 }

@@ -174,7 +174,7 @@ public unsafe class BaseApp : IApp
             .ThrowHResult();
 
         DepthStencilDesc depthStencilDesc;
-        depthStencilDesc.DepthEnable = 1;
+        depthStencilDesc.DepthEnable = 0;
         depthStencilDesc.DepthWriteMask = DepthWriteMask.DepthWriteMaskAll;
         depthStencilDesc.DepthFunc = ComparisonFunc.ComparisonLess;
         depthStencilDesc.StencilEnable = 1;
